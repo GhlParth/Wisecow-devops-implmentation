@@ -1,0 +1,8 @@
+# GitHub Actions runner directory
+actions-runner/
+
+# Application runtime response fifo
+response
+
+# Shell/automation logs
+*.log
