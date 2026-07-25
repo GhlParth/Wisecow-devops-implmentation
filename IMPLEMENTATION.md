@@ -171,3 +171,17 @@ Run command:
 ```bash
 ./scripts/app_checker.sh
 ```
+
+## 🤝 Let’s Connect
+
+If you're a recruiter, engineer, or cloud enthusiast interested in DevOps and automation, feel free to connect with me.
+
+- 💼 **[LinkedIn](www.linkedin.com/in/gohel-parth-a73625212)**
+- 📧 **[Email](parthngohel004@gmail.com)**
+
+## 👤 Author
+
+**Parth Gohil**  
+- [@Parth Gohel](https://github.com/GhlParth)
+DevOps Engineer | Cloud | Automation
+
