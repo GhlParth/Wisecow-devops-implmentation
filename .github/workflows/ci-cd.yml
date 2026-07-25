@@ -55,19 +55,51 @@ jobs:
           ${{ secrets.DOCKER_HUB_USERNAME }}/wisecow:latest
           ${{ secrets.DOCKER_HUB_USERNAME }}/wisecow:${{ env.VERSION_TAG }}
 
-  cd-pipeline:
+  cd-pipeline-test:
     needs: ci-pipeline
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
 
     steps:
     - name: Checkout Repository
       uses: actions/checkout@v3
 
-    - name: Deploy to Local Kind Cluster
+    # Create Kind Cluster using helm/kind-action
+    - name: Create Kind Cluster
+      uses: helm/kind-action@v1.8.0
+      with:
+        config: kind-config.yaml
+        cluster_name: wisecow-cluster
+
+    # Build and load local image to Kind cluster to verify it works
+    - name: Build and Load Docker Image
       run: |
-        # Apply updated manifests
+        docker build -t wisecow:latest .
+        kind load docker-image wisecow:latest --name wisecow-cluster
+
+    # Deploy Nginx Ingress
+    - name: Install NGINX Ingress Controller
+      run: |
+        kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/main/deploy/static/provider/kind/deploy.yaml
+        echo "Waiting for Ingress Controller to become ready..."
+        kubectl wait --namespace ingress-nginx \
+          --for=condition=ready pod \
+          --selector=app.kubernetes.io/component=controller \
+          --timeout=180s
+
+    # Create the TLS secret
+    - name: Create TLS Secret
+      run: |
+        kubectl create secret tls wisecow-tls --cert=certs/tls.crt --key=certs/tls.key
+
+    # Deploy Wisecow manifests
+    - name: Deploy wisecow manifests
+      run: |
         kubectl apply -f k8s/
-        # Set the image to the newly built unique tag version
-        kubectl set image deployment/wisecow wisecow=${{ secrets.DOCKER_HUB_USERNAME }}/wisecow:v1.0.${{ github.run_number }}
-        # Verify deployment rollout succeeded
+        echo "Waiting for Wisecow deployment to be ready..."
         kubectl rollout status deployment/wisecow --timeout=120s
+
+    # Verify connection over TLS
+    - name: Verify application TLS access
+      run: |
+        echo "Testing connection to HTTPS wisecow.local via Ingress..."
+        curl -k -v --resolve wisecow.local:443:127.0.0.1 https://wisecow.local/
